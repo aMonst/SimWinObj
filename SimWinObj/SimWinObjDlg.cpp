@@ -46,6 +46,7 @@ BOOL CSimWinObjDlg::OnInitDialog()
 
 	// TODO: 在此添加额外的初始化代码
 	EnumDriver();
+	//设置树形控件的风格为左侧带按钮 具有分割线
 	m_TreeCtrl.ModifyStyle(NULL,TVS_HASBUTTONS | TVS_HASLINES | TVS_LINESATROOT);
 	InitDriverInfo();
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
@@ -90,10 +91,15 @@ HCURSOR CSimWinObjDlg::OnQueryDragIcon()
 void CSimWinObjDlg::InitDriverInfo()
 {
 	HTREEITEM hRoot = m_TreeCtrl.InsertItem(_T("驱动信息"), NULL, NULL);
-	for (vector<CString>::iterator it = g_DriverNameList.begin(); it != g_DriverNameList.end(); it++)
+	for (vector<DRIVER_INFO>::iterator it = g_DriverNameList.begin(); it != g_DriverNameList.end(); it++)
 	{
-		m_TreeCtrl.InsertItem(it->GetBuffer(), NULL, NULL, hRoot);
+		m_TreeCtrl.InsertItem(it->strDriverName.GetBuffer(), NULL, NULL, hRoot);
+		CString strFullName = _T("\\Driver\\") + it->strDriverName;
+		GetDriverInof(strFullName.GetBuffer(), &it->pDriverPointer);
+		__asm
+		{
+			int 3
+		}
 	}
-
 }
 

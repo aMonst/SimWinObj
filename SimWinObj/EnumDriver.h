@@ -1,4 +1,5 @@
 #pragma once
+#include "DeviceInfo.h"
 #include <vector>
 using namespace std;
 
@@ -44,5 +45,5 @@ typedef struct _DIRECTORY_BASIC_INFORMATION {
 // 字符串初始化  
 
 //用来存储设备驱动对象名称的链表
-extern vector<CString> g_DriverNameList;
+extern vector<DRIVER_INFO> g_DriverNameList;
 BOOL EnumDriver();

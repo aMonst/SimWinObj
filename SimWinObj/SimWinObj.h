@@ -23,7 +23,8 @@ public:
 // ÷ÿ–¥
 	public:
 	virtual BOOL InitInstance();
-
+	BOOL InstallDriver();
+	BOOL UninstallDriver();
 //  µœ÷
 
 	DECLARE_MESSAGE_MAP()

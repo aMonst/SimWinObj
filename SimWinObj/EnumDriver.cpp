@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "EnumDriver.h"
-vector<CString> g_DriverNameList;
+vector<DRIVER_INFO> g_DriverNameList;
 typedef VOID(CALLBACK* RTLINITUNICODESTRING)(PUNICODE_STRING, PCWSTR);
 
 RTLINITUNICODESTRING RtlInitUnicodeString;
@@ -36,7 +36,6 @@ BOOL EnumDriver()
 	NTSTATUS           ntStatus;
 	HANDLE             hDirectory;
 	CString strDriverName;
-
 	hNtdll = LoadLibrary(_T("ntdll.dll"));
 	if (NULL == hNtdll)
 	{
@@ -91,8 +90,9 @@ BOOL EnumDriver()
 		pBuffer2 = pBuffer;
 		while ((pBuffer2->ObjectName.Length != 0) && (pBuffer2->ObjectTypeName.Length != 0))
 		{
-			strDriverName = pBuffer2->ObjectName.Buffer;
-			g_DriverNameList.push_back(strDriverName);
+			DRIVER_INFO DriverInfo;
+			DriverInfo.strDriverName = pBuffer2->ObjectName.Buffer;
+			g_DriverNameList.push_back(DriverInfo);
 			pBuffer2++;
 		}
 	}
