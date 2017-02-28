@@ -95,7 +95,15 @@ void CSimWinObjDlg::InitDriverInfo()
 	{
 		m_TreeCtrl.InsertItem(it->strDriverName.GetBuffer(), NULL, NULL, hRoot);
 		CString strFullName = _T("\\Driver\\") + it->strDriverName;
+		__asm
+		{
+			int 3
+		}
 		GetDriverInof(strFullName.GetBuffer(), &it->pDriverPointer);
+		PDEVICE_INFO pDeviceInfo = new DEVICE_INFO;
+		ZeroMemory(pDeviceInfo, sizeof(DEVICE_INFO));
+		GetDeviceFromDriver(&it->pDriverPointer, pDeviceInfo);
+		it->pDeviceObject = pDeviceInfo;
 	}
 }
 

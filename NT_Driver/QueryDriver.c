@@ -160,7 +160,7 @@ NTSTATUS HelloDDKDeviceIOControl(IN PDEVICE_OBJECT pDevObj,
 	NTSTATUS status = STATUS_SUCCESS;
 	WCHAR* pInBuffer = NULL;
 	KdPrint(("Enter HelloDDKDeviceIOControl\n"));
-
+	
 	//得到当前堆栈
 	stack = IoGetCurrentIrpStackLocation(pIrp);
 	//得到输入缓冲区大小
@@ -171,22 +171,76 @@ NTSTATUS HelloDDKDeviceIOControl(IN PDEVICE_OBJECT pDevObj,
 	code = stack->Parameters.DeviceIoControl.IoControlCode;
 	
 	info = 0;
-
+	__asm
+	{
+		int 3
+	}
 	switch (code)
 	{						// process request
 		case CTL_QUERY_DRIVER_INFO: 
 			{
-				pInBuffer = (WCHAR*)(pIrp->AssociatedIrp.SystemBuffer);
+				UNICODE_STRING DriverName;
+				PDRIVER_OBJECT DriverObject;
+				PDEVICE_OBJECT DeviceObject;
+				pInBuffer = (WCHAR*)pIrp->AssociatedIrp.SystemBuffer;
 				DbgPrint("Driver name:%ws\n", pInBuffer);
-				pDriverObj = QueryDriverInfo;
+				RtlInitUnicodeString( &DriverName, pInBuffer);
+				ObReferenceObjectByName( &DriverName, OBJ_CASE_INSENSITIVE, NULL, 0, ( POBJECT_TYPE )IoDriverObjectType, KernelMode, NULL, &DriverObject);
 				RtlZeroMemory(pInBuffer, cbout);
-				RtlCopyMemory(pInBuffer, pDriverObj, cbout);
+				RtlCopyMemory(pInBuffer, &DriverObject, cbout);
 				info = cbout;
 			}
 			break;
 		
+		case CTL_QUERY_DEVICE_FOR_DRIVER:
+			{
+				DEVICE_INFO DeviceInfo;
+				PDEVICE_OBJECT pDeviceObj;
+				PDRIVER_OBJECT pDriverObj;
+				PDEVICE_INFO pOutBuffer;
+				UNICODE_STRING uDeviceName;
+				UNICODE_STRING uAttachedName;
+				pDriverObj = *(PDRIVER_OBJECT*)(pIrp->AssociatedIrp.SystemBuffer);
+				
+				if(NULL == pDriverObj)
+				{
+					break;
+				}
+				pDeviceObj = pDriverObj->DeviceObject;
+				if(NULL == pDeviceObj)
+				{
+					RtlZeroMemory(&DeviceInfo, sizeof(DEVICE_INFO));
+				}else
+				{
+					DeviceInfo.pDeviceObject = pDeviceObj;
+					DeviceInfo.pDrierObject = pDeviceObj->DriverObject;
+					DeviceInfo.DevieStack = pDeviceObj->StackSize;
+					//获取设备名称
+					uDeviceName.Buffer = ExAllocatePoolWithTag(PagedPool, sizeof(WCHAR) * 50, 'cinU');
+					uDeviceName.MaximumLength = 50 * sizeof(WCHAR);
+					GetDeviceName(pDeviceObj, &uDeviceName);
+					RtlCopyMemory(DeviceInfo.strDeviceName, uDeviceName.Buffer, uDeviceName.Length);
+					ExFreePoolWithTag(uDeviceName.Buffer, 'cinU');
+					
+					//获取它绑定的设备的名称
+					uAttachedName.Buffer = ExAllocatePoolWithTag(PagedPool, sizeof(WCHAR) * 50, 'cinU');
+					uAttachedName.MaximumLength = 50 * sizeof(WCHAR);
+					GetDeviceName(pDeviceObj->AttachedDevice, &uAttachedName);
+					RtlCopyMemory(DeviceInfo.strAttachedDevice, uDeviceName.Buffer, uDeviceName.Length + sizeof(WCHAR));
+					ExFreePoolWithTag(uAttachedName.Buffer, 'cinU');
+					
+					DeviceInfo.pNextDevice = (PDEVICE_INFO)(pDeviceObj->NextDevice);
+					DeviceInfo.pAttachedDevicePointer = (PDEVICE_INFO)(pDeviceObj->AttachedDevice);
+				}
+				
+				pOutBuffer = pIrp->AssociatedIrp.SystemBuffer;
+				RtlCopyMemory(pOutBuffer, &DeviceInfo, sizeof(DEVICE_INFO));
+				info = cbout;
+			}
+			break;
 		case CTL_QUERY_DEVICE_INFO:
-			{	
+			{
+				
 			}
 			break;
 		case CTL_QUERY_ATTACHED_DEVICE:
@@ -208,12 +262,48 @@ NTSTATUS HelloDDKDeviceIOControl(IN PDEVICE_OBJECT pDevObj,
 	return status;
 }
 
-PDRIVER_OBJECT QueryDriverInfo(WCHAR* pDriverName)
+void GetDeviceName(PDEVICE_OBJECT pDeviceObj, PUNICODE_STRING pDeviceName)
 {
-	UNICODE_STRING uDriverName;
-	PDRIVER_OBJECT DriverObject;
-	
-	ObReferenceObjectByName(&uDriverName, OBJ_CASE_INSENSITIVE, NULL, 0, ( POBJECT_TYPE ) IoDriverObjectType, KernelMode, NULL, &DriverObject);
-	DbgPrint("DriverObject: %08x", uDriverName);
-	return DriverObject;
+	POBJECT_HEADER ObjectHeader;
+	POBJECT_HEADER_NAME_INFO ObjectNameInfo; 
+
+	__asm
+	{
+		int 3
+	}
+	if ( pDeviceObj == NULL )
+	{
+		DbgPrint( "pDeviceObj is NULL!\n" );
+		return;
+	}
+	// 得到对象头
+	ObjectHeader = OBJECT_TO_OBJECT_HEADER( pDeviceObj );
+
+	if ( ObjectHeader )
+	{
+		// 查询设备名称并打印
+		ObjectNameInfo = OBJECT_HEADER_TO_NAME_INFO( ObjectHeader );
+
+		if ( ObjectNameInfo && ObjectNameInfo->Name.Buffer )
+		{
+			DbgPrint( "Driver Name:%wZ - Device Name:%wZ - Driver Address:0x%x - Device Address:0x%x\n",
+					&pDeviceObj->DriverObject->DriverName,
+					&ObjectNameInfo->Name,
+					pDeviceObj->DriverObject,
+					pDeviceObj );
+			RtlCopyUnicodeString(pDeviceName, &ObjectNameInfo->Name);
+		}
+
+		// 对于没有名称的设备，则打印 NULL
+		else if ( pDeviceObj->DriverObject )
+		{
+			DbgPrint( "Driver Name:%wZ - Device Name:%S - Driver Address:0x%x - Device Address:0x%x\n",
+					&pDeviceObj->DriverObject->DriverName,
+					L"NULL",
+					pDeviceObj->DriverObject,
+					pDeviceObj );
+			
+			RtlInitUnicodeString(pDeviceName, L"");
+		}
+	  }
 }

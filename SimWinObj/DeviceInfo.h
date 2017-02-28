@@ -28,6 +28,6 @@ typedef struct tag_DRIVER_INFO
 }DRIVER_INFO, *PDRIVER_INFO;
 
 void GetDriverInof(LPTSTR pDriverName, void **ppDriverPointer);
-void GetDeviceFromDriver(void *pDriverPointer);
+void GetDeviceFromDriver(void *pDriverPointer, PDEVICE_INFO pDeviceInfo);
 void GetNextDevice(PDEVICE_INFO pDeviceObject);
 void GetAttachedDevice(PDEVICE_INFO pDeviceObject);
