@@ -4,12 +4,13 @@
 #define CTL_QUERY_DEVICE_INFO CTL_CODE(FILE_DEVICE_UNKNOWN, 0x802, METHOD_BUFFERED, FILE_ANY_ACCESS) //根据当前设备对象查询下一个设备对象
 #define CTL_QUERY_ATTACHED_DEVICE CTL_CODE(FILE_DEVICE_UNKNOWN, 0x803, METHOD_BUFFERED, FILE_ANY_ACCESS) //根据设备对象查询它绑定的设备对象
 
+#define MAX_DEVICE_NAME_LENGTH 100
 typedef struct tag_DEVICE_INFO
 {
-	WCHAR strDeviceName[50]; //设备名称
+	WCHAR strDeviceName[MAX_DEVICE_NAME_LENGTH]; //设备名称
 	void *pDeviceObject; //设备对象指针
 	void *pDrierObject;//驱动对象指针
-	WCHAR strAttachedDevice[50]; //绑定在它之上的设备名称
+	WCHAR strAttachedDevice[MAX_DEVICE_NAME_LENGTH]; //绑定在它之上的设备名称
 	struct tag_DEVICE_INFO* pAttachedDevicePointer; //绑定在它之上的设备对象的指针
 	ULONG DevieStack;//设备栈的大小
 	struct tag_DEVICE_INFO* pNextDevice; //下一个设备对象的指针

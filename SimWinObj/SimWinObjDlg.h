@@ -18,7 +18,8 @@ public:
 
 	protected:
 	virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV 支持
-	void InitDriverInfo();	//向树形控件中添加驱动信息
+	void InitDriverInfo();	//初始化从驱动中获取到的信息
+	void ShowData(); //将相关信息显示到窗口上
 
 // 实现
 protected:
@@ -31,4 +32,5 @@ protected:
 	DECLARE_MESSAGE_MAP()
 public:
 	CTreeCtrl m_TreeCtrl;
+	afx_msg void OnNMDblclkTree1(NMHDR *pNMHDR, LRESULT *pResult);
 };

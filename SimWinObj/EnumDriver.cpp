@@ -92,6 +92,8 @@ BOOL EnumDriver()
 		{
 			DRIVER_INFO DriverInfo;
 			DriverInfo.strDriverName = pBuffer2->ObjectName.Buffer;
+			DriverInfo.pDeviceObject = NULL;
+			DriverInfo.pDriverPointer = NULL;
 			g_DriverNameList.push_back(DriverInfo);
 			pBuffer2++;
 		}

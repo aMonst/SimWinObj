@@ -171,10 +171,7 @@ NTSTATUS HelloDDKDeviceIOControl(IN PDEVICE_OBJECT pDevObj,
 	code = stack->Parameters.DeviceIoControl.IoControlCode;
 	
 	info = 0;
-	__asm
-	{
-		int 3
-	}
+
 	switch (code)
 	{						// process request
 		case CTL_QUERY_DRIVER_INFO: 
@@ -216,15 +213,17 @@ NTSTATUS HelloDDKDeviceIOControl(IN PDEVICE_OBJECT pDevObj,
 					DeviceInfo.pDrierObject = pDeviceObj->DriverObject;
 					DeviceInfo.DevieStack = pDeviceObj->StackSize;
 					//获取设备名称
-					uDeviceName.Buffer = ExAllocatePoolWithTag(PagedPool, sizeof(WCHAR) * 50, 'cinU');
-					uDeviceName.MaximumLength = 50 * sizeof(WCHAR);
+					uDeviceName.Buffer = ExAllocatePoolWithTag(PagedPool, sizeof(WCHAR) * MAX_DEVICE_NAME_LENGTH, 'cinU');
+					RtlZeroMemory(uDeviceName.Buffer, sizeof(WCHAR) * MAX_DEVICE_NAME_LENGTH);
+					uDeviceName.MaximumLength = MAX_DEVICE_NAME_LENGTH * sizeof(WCHAR);
 					GetDeviceName(pDeviceObj, &uDeviceName);
-					RtlCopyMemory(DeviceInfo.strDeviceName, uDeviceName.Buffer, uDeviceName.Length);
+					RtlCopyMemory(DeviceInfo.strDeviceName, uDeviceName.Buffer, uDeviceName.Length + sizeof(WCHAR));
 					ExFreePoolWithTag(uDeviceName.Buffer, 'cinU');
 					
 					//获取它绑定的设备的名称
-					uAttachedName.Buffer = ExAllocatePoolWithTag(PagedPool, sizeof(WCHAR) * 50, 'cinU');
-					uAttachedName.MaximumLength = 50 * sizeof(WCHAR);
+					uAttachedName.Buffer = ExAllocatePoolWithTag(PagedPool, sizeof(WCHAR) * MAX_DEVICE_NAME_LENGTH, 'cinU');
+					RtlZeroMemory(uAttachedName.Buffer, sizeof(WCHAR) * MAX_DEVICE_NAME_LENGTH);
+					uAttachedName.MaximumLength = MAX_DEVICE_NAME_LENGTH * sizeof(WCHAR);
 					GetDeviceName(pDeviceObj->AttachedDevice, &uAttachedName);
 					RtlCopyMemory(DeviceInfo.strAttachedDevice, uDeviceName.Buffer, uDeviceName.Length + sizeof(WCHAR));
 					ExFreePoolWithTag(uAttachedName.Buffer, 'cinU');
@@ -240,7 +239,46 @@ NTSTATUS HelloDDKDeviceIOControl(IN PDEVICE_OBJECT pDevObj,
 			break;
 		case CTL_QUERY_DEVICE_INFO:
 			{
+				PDEVICE_INFO pDeviceInfo;
+				DEVICE_INFO NextDevice;
+				PDEVICE_OBJECT pDeviceObj;
+				UNICODE_STRING uDeviceName;
+				UNICODE_STRING uAttachedName;
+				PDEVICE_INFO pOutBuffer;
+
+				pDeviceInfo = *(PDEVICE_INFO*)(pIrp->AssociatedIrp.SystemBuffer);
+				pDeviceObj = ((PDEVICE_OBJECT)(pDeviceInfo->pDeviceObject))->NextDevice;
+				if(NULL != pDeviceObj)
+				{
+					NextDevice.pDeviceObject = pDeviceObj;
+					NextDevice.pDrierObject = pDeviceObj->DriverObject;
+					NextDevice.DevieStack = pDeviceObj->StackSize;
+					//获取设备名称
+					uDeviceName.Buffer = ExAllocatePoolWithTag(PagedPool, sizeof(WCHAR) * MAX_DEVICE_NAME_LENGTH, 'cinU');
+					RtlZeroMemory(uDeviceName.Buffer, sizeof(WCHAR) * MAX_DEVICE_NAME_LENGTH);
+					uDeviceName.MaximumLength = MAX_DEVICE_NAME_LENGTH * sizeof(WCHAR);
+					GetDeviceName(pDeviceObj, &uDeviceName);
+					RtlCopyMemory(NextDevice.strDeviceName, uDeviceName.Buffer, uDeviceName.Length + sizeof(WCHAR));
+					ExFreePoolWithTag(uDeviceName.Buffer, 'cinU');
+					
+					//获取它绑定的设备的名称
+					uAttachedName.Buffer = ExAllocatePoolWithTag(PagedPool, sizeof(WCHAR) * MAX_DEVICE_NAME_LENGTH, 'cinU');
+					RtlZeroMemory(uAttachedName.Buffer, sizeof(WCHAR) * MAX_DEVICE_NAME_LENGTH);
+					uAttachedName.MaximumLength = MAX_DEVICE_NAME_LENGTH * sizeof(WCHAR);
+					GetDeviceName(pDeviceObj->AttachedDevice, &uAttachedName);
+					RtlCopyMemory(NextDevice.strAttachedDevice, uDeviceName.Buffer, uDeviceName.Length + sizeof(WCHAR));
+					ExFreePoolWithTag(uAttachedName.Buffer, 'cinU');
+					
+					NextDevice.pNextDevice = (PDEVICE_INFO)(pDeviceObj->NextDevice);
+					NextDevice.pAttachedDevicePointer = (PDEVICE_INFO)(pDeviceObj->AttachedDevice);
+				}else
+				{
+					RtlZeroMemory(&NextDevice, sizeof(DEVICE_INFO));
+				}
 				
+				pOutBuffer = pIrp->AssociatedIrp.SystemBuffer;
+				RtlCopyMemory(pOutBuffer, &NextDevice, sizeof(DEVICE_INFO));
+				info = cbout;
 			}
 			break;
 		case CTL_QUERY_ATTACHED_DEVICE:
@@ -267,10 +305,6 @@ void GetDeviceName(PDEVICE_OBJECT pDeviceObj, PUNICODE_STRING pDeviceName)
 	POBJECT_HEADER ObjectHeader;
 	POBJECT_HEADER_NAME_INFO ObjectNameInfo; 
 
-	__asm
-	{
-		int 3
-	}
 	if ( pDeviceObj == NULL )
 	{
 		DbgPrint( "pDeviceObj is NULL!\n" );
@@ -303,7 +337,7 @@ void GetDeviceName(PDEVICE_OBJECT pDeviceObj, PUNICODE_STRING pDeviceName)
 					pDeviceObj->DriverObject,
 					pDeviceObj );
 			
-			RtlInitUnicodeString(pDeviceName, L"");
+			pDeviceName->Length = 0;
 		}
 	  }
 }

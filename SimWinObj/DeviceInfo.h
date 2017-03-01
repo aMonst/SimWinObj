@@ -2,7 +2,7 @@
 #include <vector>
 #include <winioctl.h>
 using namespace std;
-
+#define MAX_DEVICE_NAME_LENGTH 100
 #define CTL_QUERY_DRIVER_INFO CTL_CODE(FILE_DEVICE_UNKNOWN, 0x800, METHOD_BUFFERED, FILE_ANY_ACCESS) //查询驱动对象
 #define CTL_QUERY_DEVICE_FOR_DRIVER CTL_CODE(FILE_DEVICE_UNKNOWN, 0x801, METHOD_BUFFERED, FILE_ANY_ACCESS) //查询驱动上创建的设备对象
 #define CTL_QUERY_DEVICE_INFO CTL_CODE(FILE_DEVICE_UNKNOWN, 0x802, METHOD_BUFFERED, FILE_ANY_ACCESS) //根据当前设备对象查询下一个设备对象
@@ -11,10 +11,10 @@ using namespace std;
 
 typedef struct tag_DEVICE_INFO
 {
-	TCHAR strDeviceName[50]; //设备名称
+	TCHAR strDeviceName[MAX_DEVICE_NAME_LENGTH]; //设备名称
 	void *pDeviceObject; //设备对象指针
 	void *pDrierObject;//驱动对象指针
-	TCHAR strAttachedDevice[50]; //绑定在它之上的设备名称
+	TCHAR strAttachedDevice[MAX_DEVICE_NAME_LENGTH]; //绑定在它之上的设备名称
 	tag_DEVICE_INFO* pAttachedDevicePointer; //绑定在它之上的设备对象的指针
 	DWORD DevieStack;//设备栈的大小
 	tag_DEVICE_INFO* pNextDevice; //下一个设备对象的指针
